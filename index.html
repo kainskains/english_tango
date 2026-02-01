@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mathematical & CS English Master</title>
+    <style>
+        :root { --primary: #007aff; --secondary: #6c757d; --bg: #f8f9fa; }
+        body { font-family: 'Segoe UI', Meiryo, sans-serif; background-color: var(--bg); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .container { background: white; padding: 2rem; border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); width: 90%; max-width: 550px; text-align: center; }
+        .progress-container { margin-bottom: 1rem; }
+        #progress-text { font-size: 1.1rem; font-weight: bold; color: var(--primary); }
+        .stats-box { font-size: 0.85rem; color: #555; background: #f1f3f5; padding: 10px; border-radius: 10px; margin-bottom: 1.5rem; min-height: 3.5rem; display: flex; flex-direction: column; justify-content: center; }
+        .card { background: #fff; border: 3px solid #e9ecef; border-radius: 15px; padding: 4rem 1.5rem; margin-bottom: 2rem; cursor: pointer; transition: all 0.2s; position: relative; display: flex; align-items: center; justify-content: center; min-height: 100px; }
+        .card:hover { border-color: var(--primary); transform: translateY(-2px); }
+        .word { font-size: 2rem; font-weight: 800; color: #2d3436; word-break: break-word; }
+        .meaning { font-size: 1.6rem; color: #e84393; display: none; font-weight: bold; }
+        .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        button { padding: 15px; border: none; border-radius: 12px; cursor: pointer; font-size: 1rem; font-weight: bold; transition: opacity 0.2s; }
+        .btn-back { background-color: var(--secondary); color: white; }
+        .btn-next { background-color: var(--primary); color: white; }
+        .btn-shuffle { background-color: #2d3436; color: white; grid-column: span 2; margin-top: 10px; }
+        button:active { opacity: 0.8; }
+        .hint { font-size: 0.8rem; color: #adb5bd; margin-top: 1.5rem; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="progress-container">
+        <div id="progress-text">0 / 0</div>
+    </div>
+    
+    <div class="stats-box">
+        <div>出現回数: <span id="total-count">-</span>回</div>
+        <div style="font-size: 0.75rem; margin-top: 4px;">出現年: <span id="years">-</span></div>
+    </div>
+    
+    <div class="card" id="card" onclick="flipCard()">
+        <div class="word" id="word">Loading...</div>
+        <div class="meaning" id="meaning">意味</div>
+    </div>
+
+    <div class="btn-grid">
+        <button class="btn-back" onclick="prevWord()">← 戻る</button>
+        <button class="btn-next" onclick="nextWord()">次へ →</button>
+        <button class="btn-shuffle" onclick="shuffleAndStart()">シャッフルして最初から</button>
+    </div>
+    
+    <p class="hint">カードをクリックで和訳を表示</p>
+</div>
+
+<script>
+    const fullData = [
+        {w: "implication", j: "包含（含意）", t: 7, y: "2017, 19, 20, 21, 22, 23, 25"},
+        {w: "parentheses", j: "かっこ", t: 7, y: "2017, 19, 20, 21, 22, 23, 25"},
+        {w: "transpose", j: "転置", t: 7, y: "2017, 19, 20, 21, 22, 23, 25"},
+        {w: "diagonal matrix", j: "対角行列", t: 6, y: "2019, 20, 21, 23, 25"},
+        {w: "fraction", j: "分数", t: 6, y: "2017, 19, 20, 21, 23"},
+        {w: "negation", j: "否定", t: 6, y: "2017, 19, 20, 21, 23, 25"},
+        {w: "polynomial", j: "多項式", t: 6, y: "2019, 21, 22, 23, 25"},
+        {w: "prediction", j: "予測", t: 6, y: "2017, 20, 21, 23, 25"},
+        {w: "premise", j: "前提", t: 6, y: "2017, 19, 20, 21, 23, 25"},
+        {w: "standard deviation", j: "標準偏差", t: 6, y: "2017, 19, 20, 23, 25"},
+        {w: "symmetric matrix", j: "対称行列", t: 6, y: "2017, 19, 22, 23, 25"},
+        {w: "syntax", j: "構文（シンタックス）", t: 6, y: "2020, 21, 22, 23, 25"},
+        {w: "unsupervised learning", j: "教師なし学習", t: 6, y: "2017, 20, 21, 22, 23, 25"},
+        {w: "arithmetic operations", j: "四則演算", t: 5, y: "2017, 19, 22, 25"},
+        {w: "assignment", j: "代入（割り当て）", t: 5, y: "2021, 22, 25"},
+        {w: "axiom", j: "公理", t: 5, y: "2020, 23, 25"},
+        {w: "classification", j: "分類", t: 5, y: "2021, 23, 25"},
+        {w: "decimal point", j: "小数点", t: 5, y: "2019, 21, 23, 25"},
+        {w: "derivative", j: "導関数（微分）", t: 5, y: "2017, 20, 22, 25"},
+        {w: "differentiate", j: "微分する", t: 5, y: "2021, 23, 25"},
+        {w: "eigenvector", j: "固有ベクトル", t: 5, y: "2017, 20, 22, 23"},
+        {w: "interpolation", j: "補間", t: 5, y: "2020, 21, 23, 25"},
+        {w: "inverse", j: "逆（行列・の）", t: 5, y: "2017, 21, 22, 25"},
+        {w: "marginal distribution", j: "周辺分布", t: 5, y: "2017, 19, 20, 22"},
+        {w: "quotient", j: "商", t: 5, y: "2017, 20, 21, 23, 25"},
+        {w: "argument", j: "引数（独立変数）", t: 4, y: "2020, 22, 23"},
+        {w: "assertion", j: "断定（表明）", t: 4, y: "2017, 22, 25"},
+        {w: "complex number", j: "複素数", t: 4, y: "2021, 23, 25"},
+        {w: "contradiction", j: "矛盾", t: 4, y: "2019, 20, 23"},
+        {w: "existential quantifier", j: "存在記号", t: 4, y: "2017, 20, 21, 22"},
+        {w: "extraction", j: "抽出（開平・開立）", t: 4, y: "2020, 21, 23"},
+        {w: "finite", j: "有限の", t: 4, y: "2019, 22, 25"},
+        {w: "implementation", j: "実装", t: 4, y: "2017, 20, 21"},
+        {w: "mantissa", j: "仮数", t: 4, y: "2017, 20, 22, 25"},
+        {w: "precedence", j: "優先順位", t: 4, y: "2020, 22, 23, 25"},
+        {w: "roundoff error", j: "丸め誤差", t: 4, y: "2020, 21, 23"},
+        {w: "significant digit", j: "有効数字", t: 4, y: "2020, 21, 22"},
+        {w: "supervised learning", j: "教師あり学習", t: 4, y: "2021, 23, 25"},
+        {w: "theorem", j: "定理", t: 4, y: "2017, 19, 20"},
+        {w: "attribute", j: "属性", t: 3, y: "2020, 21"},
+        {w: "correlation", j: "相関", t: 3, y: "2017, 22, 23"},
+        {w: "curse of dimensionality", j: "次元の呪い", t: 3, y: "2017, 19, 20"},
+        {w: "declaration", j: "宣言", t: 3, y: "2017, 21, 22"},
+        {w: "division", j: "除算（割り算）", t: 3, y: "2020, 22, 25"},
+        {w: "eigenvalue", j: "固有値", t: 3, y: "2021, 23"},
+        {w: "equivalence relation", j: "同値関係", t: 3, y: "2020, 22, 23"},
+        {w: "feature", j: "特徴（特徴量）", t: 3, y: "2017, 21, 22"},
+        {w: "inner product", j: "内積", t: 3, y: "2017, 21, 23"},
+        {w: "proposition", j: "命題", t: 3, y: "2017, 20, 22"},
+        {w: "reciprocal", j: "逆数", t: 3, y: "2019, 25"},
+        {w: "triangular inequality", j: "三角不等式", t: 3, y: "2017, 21, 23"},
+        {w: "variance", j: "分散", t: 3, y: "2019, 20"},
+        {w: "array", j: "配列", t: 2, y: "2017, 21"},
+        {w: "basis", j: "基底", t: 2, y: "2022, 23"},
+        {w: "covariance", j: "共分散", t: 2, y: "2017, 23"},
+        {w: "density function", j: "密度関数", t: 2, y: "2023, 25"},
+        {w: "detect", j: "検出する", t: 2, y: "2019, 25"},
+        {w: "empty set", j: "空集合", t: 2, y: "2021, 25"},
+        {w: "estimation", j: "推定", t: 2, y: "2017, 25"},
+        {w: "exclusive", j: "排他的", t: 2, y: "2019, 22"},
+        {w: "extension", j: "拡張", t: 2, y: "2017, 19"},
+        {w: "imaginary number", j: "虚数", t: 2, y: "2019, 22"},
+        {w: "inequality", j: "不等式", t: 2, y: "2019, 20"},
+        {w: "interaction", j: "相互作用", t: 2, y: "2019, 22"},
+        {w: "linear mapping", j: "線形写像", t: 2, y: "2019, 23"},
+        {w: "numerator", j: "分子", t: 2, y: "2017, 21"},
+        {w: "orthogonal matrix", j: "直交行列", t: 2, y: "2022, 25"},
+        {w: "predicate", j: "述語", t: 2, y: "2019, 22"},
+        {w: "principal component analysis", j: "主成分分析", t: 2, y: "2022, 23"},
+        {w: "rational number", j: "有理数", t: 2, y: "2020, 22"},
+        {w: "rule of inference", j: "推論規則", t: 2, y: "2019, 23"},
+        {w: "semantics", j: "意味論", t: 2, y: "2017, 22"},
+        {w: "square matrix", j: "正方行列", t: 2, y: "2017, 23"},
+        {w: "substitution", j: "代入（置換）", t: 2, y: "2020, 21"},
+        {w: "universal quantifier", j: "全称記号", t: 2, y: "2019, 22"},
+        {w: "absolute error", j: "絶対誤差", t: 1, y: "2023"},
+        {w: "complement form", j: "補数形式", t: 1, y: "2019"},
+        {w: "degree of freedom", j: "自由度", t: 1, y: "2017"},
+        {w: "descriptor", j: "記述子", t: 1, y: "2021"},
+        {w: "determinant", j: "行列式", t: 1, y: "2019"},
+        {w: "expectation", j: "期待値", t: 1, y: "2025"},
+        {w: "joint distribution", j: "同時分布", t: 1, y: "2023"},
+        {w: "normalization", j: "正規化", t: 1, y: "2019"},
+        {w: "probability distribution", j: "確率分布", t: 1, y: "2025"},
+        {w: "random variable", j: "確率変数", t: 1, y: "2019"},
+        {w: "statement", j: "文", t: 1, y: "2021"},
+        {w: "verify", j: "検証する", t: 1, y: "2025"}
+    ];
+
+    let currentIndex = 0;
+    let quizData = [];
+
+    function shuffleAndStart() {
+        quizData = [...fullData].sort(() => Math.random() - 0.5);
+        currentIndex = 0;
+        updateUI();
+    }
+
+    function updateUI() {
+        const item = quizData[currentIndex];
+        document.getElementById('word').innerText = item.w;
+        document.getElementById('meaning').innerText = item.j;
+        document.getElementById('total-count').innerText = item.t;
+        document.getElementById('years').innerText = item.y;
+        document.getElementById('progress-text').innerText = `${currentIndex + 1} / ${quizData.length}`;
+        
+        // 常に表面（英語）に戻す
+        document.getElementById('word').style.display = 'block';
+        document.getElementById('meaning').style.display = 'none';
+    }
+
+    function flipCard() {
+        const w = document.getElementById('word');
+        const m = document.getElementById('meaning');
+        if (w.style.display === 'none') {
+            w.style.display = 'block';
+            m.style.display = 'none';
+        } else {
+            w.style.display = 'none';
+            m.style.display = 'block';
+        }
+    }
+
+    function nextWord() {
+        if (currentIndex < quizData.length - 1) {
+            currentIndex++;
+            updateUI();
+        } else {
+            alert("全単語終了です！お疲れ様でした。");
+        }
+    }
+
+    function prevWord() {
+        if (currentIndex > 0) {
+            currentIndex--;
+            updateUI();
+        }
+    }
+
+    // Initialize
+    shuffleAndStart();
+</script>
+
+</body>
+</html>
